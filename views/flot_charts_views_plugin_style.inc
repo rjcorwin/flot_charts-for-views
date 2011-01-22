@@ -5,13 +5,14 @@ class flot_charts_views_plugin_style extends views_plugin_style {
     $options = parent::option_definition();
     $options['type'] = array('default' => 'line');
     $options['size'] = array('default' => '400x200');
-    $options['x'] = array('default' => array('granularity' => 'auto', 'label' => 'default'));
-    $options['y'] = array('default' => array('granularity' => 'auto', 'label' => 'default', 'pad' => 1));
-    $options['layers'] = array('default' => array());
+    // $options['x'] = array('default' => array('granularity' => 'auto', 'label' => 'default'));
+    // $options['y'] = array('default' => array('granularity' => 'auto', 'label' => 'default', 'pad' => 1));
+    $options['flot_options_array'] = array('default' => 'null');
     return $options;
   }
 
   function options_form(&$form, &$form_state) {
+
     $form['type'] = array(
       '#type' => 'select',
       '#title' => t('Graph type'),
@@ -27,13 +28,56 @@ class flot_charts_views_plugin_style extends views_plugin_style {
       '#default_value' => $this->options['size'],
     );
 
+    $default_colors = array('#666', '#999', '#ccc');
+    $layer_0 = (isset($this->options['colors']['1'])) ? $this->options['colors']['1'] : '#666';
+    $layer_1 = (isset($this->options['colors']['2'])) ? $this->options['colors']['2'] : '#999';
+    $layer_2 = (isset($this->options['colors']['3'])) ? $this->options['colors']['3'] : '#ccc';
+
+    $form['colors'] = array(
+      '#tree' => TRUE,
+      '#type' => 'fieldset',
+      '#title' => t('Layer Colors'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    $form['colors']['0'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Layer 1'),
+      '#size' => 15,
+      '#default_value' => $layer_0,
+    );
+    $form['colors']['1'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Layer 2'),
+      '#size' => 15,
+      '#default_value' => $layer_1,
+    );
+    $form['colors']['2'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Layer 3'),
+      '#size' => 15,
+      '#default_value' => $layer_2,
+    );
+    
+    $form['flot_options_array'] = array(
+      '#type' => 'textarea',
+      '#cols' => 60,
+      '#rows' => 5,
+      '#title' => t('Options array'),
+      '#description' => t("Manually override all options by entering an array for the options."),
+      '#default_value' => $this->options['flot_options_array'],
+    );
+
+    /*
+     *  x and y min + max coming soon
+     *
+
     // Generate label fields
     $label_options = array(
       '' => '< '. t('No labels') .' >',
       'default' => t('Default (from data points)'),
     );
 
-    
     $form['x'] = array(
       '#tree' => TRUE,
       '#type' => 'fieldset',
@@ -79,67 +123,8 @@ class flot_charts_views_plugin_style extends views_plugin_style {
       '#description' => t("(Optional) Enter the Y axis Min."),
       '#default_value' => $this->options['y']['custom-y-min'],
     );
+    */
 
-    $default_colors = array('#666', '#999', '#ccc');
-    $layer_0 = (isset($this->options['colors']['1'])) ? $this->options['colors']['1'] : '#666';
-    $layer_1 = (isset($this->options['colors']['2'])) ? $this->options['colors']['2'] : '#999';
-    $layer_2 = (isset($this->options['colors']['3'])) ? $this->options['colors']['3'] : '#ccc';
-
-    $form['colors'] = array(
-      '#tree' => TRUE,
-      '#type' => 'fieldset',
-      '#title' => t('Layer Colors'),
-      '#collapsible' => TRUE,
-      '#collapsed' => FALSE,
-    );
-    $form['colors']['0'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Layer 1'),
-      '#size' => 15,
-      '#default_value' => $layer_0,
-    );
-    $form['colors']['1'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Layer 2'),
-      '#size' => 15,
-      '#default_value' => $layer_1,
-    );
-    $form['colors']['2'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Layer 3'),
-      '#size' => 15,
-      '#default_value' => $layer_2,
-    );
-
-    // Views
-    $layers = $this->get_views_by_style();
-    unset($layers["{$this->view->name}:{$this->view->current_display}"]);
-    $form['layers'] = array(
-      '#type' => 'checkboxes',
-      '#title' => t('Additional data layers'),
-      '#description' => t('Display the selected views displays as additional layers.'),
-      '#options' => $layers,
-      '#default_value' => $this->options['layers'],
-    );
-  }
-
-  /**
-   * Retrieve all views that have the specified style plugin.
-   */
-  protected function get_views_by_style($style_plugin = 'flot_charts') {
-    $views = views_get_all_views();
-    $usable = array();
-    foreach ($views as $view) {
-      foreach (array_keys($view->display) as $display) {
-        $view->set_display($display);
-        if ($view->display_handler->get_option('style_plugin') === $style_plugin) {
-          $usable["{$view->name}:{$display}"] = "{$view->name}:{$display}";
-        }
-      }
-      $view->destroy();
-    }
-    ksort($usable);
-    return $usable;
   }
 
   protected function build_layer($view, $result, $title = NULL) {
@@ -190,9 +175,10 @@ class flot_charts_views_plugin_style extends views_plugin_style {
     // Build layer.
     $layers = $this->build_layer($this->view, $this->view->result, $this->view->get_title());
 
-    $vars['data'][] = $layers['series'];
-    // $vars['data'][] = array( "label" => "far", "data" => $layers['series']);
-    // $vars['data'][] = array( "data" => $layers['series']);
+
+    // $vars['data'][] = $layers['series'];
+    // $vars['data'][] = array( "label" => "far", "data" => $layers['series']->data);
+    $vars['data'][] = array( "data" => $layers['series']->data);
     $vars['titles'] = $layers['titles'];
 
     // Set up the type class, set axes
