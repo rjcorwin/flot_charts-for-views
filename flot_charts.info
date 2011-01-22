@@ -1,4 +1,6 @@
 name = Flot Charts
 description = Provides a Views style plugin and field handler for producing Flot charts.
 core = 6.x
+dependencies[] = views
+dependencies[] = flot
 
