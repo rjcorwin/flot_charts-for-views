@@ -5,9 +5,8 @@ class flot_charts_views_plugin_style extends views_plugin_style {
     $options = parent::option_definition();
     $options['type'] = array('default' => 'line');
     $options['size'] = array('default' => '400x200');
-    // $options['x'] = array('default' => array('granularity' => 'auto', 'label' => 'default'));
-    // $options['y'] = array('default' => array('granularity' => 'auto', 'label' => 'default', 'pad' => 1));
-    $options['flot_options_array'] = array('default' => 'null');
+    $options['manual_options_array'] = array('default' => 'null');
+    $options['x-axis']['time-mode'] = array('default' => FALSE);
     return $options;
   }
 
@@ -28,38 +27,21 @@ class flot_charts_views_plugin_style extends views_plugin_style {
       '#default_value' => $this->options['size'],
     );
 
-    $default_colors = array('#666', '#999', '#ccc');
-    $layer_0 = (isset($this->options['colors']['1'])) ? $this->options['colors']['1'] : '#666';
-    $layer_1 = (isset($this->options['colors']['2'])) ? $this->options['colors']['2'] : '#999';
-    $layer_2 = (isset($this->options['colors']['3'])) ? $this->options['colors']['3'] : '#ccc';
-
-    $form['colors'] = array(
+    $form['x-axis'] = array(
       '#tree' => TRUE,
       '#type' => 'fieldset',
-      '#title' => t('Layer Colors'),
+      '#title' => t('X axis'),
       '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
+      '#collapsed' => FALSE,
     );
-    $form['colors']['0'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Layer 1'),
-      '#size' => 15,
-      '#default_value' => $layer_0,
-    );
-    $form['colors']['1'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Layer 2'),
-      '#size' => 15,
-      '#default_value' => $layer_1,
-    );
-    $form['colors']['2'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Layer 3'),
-      '#size' => 15,
-      '#default_value' => $layer_2,
+
+    $form['x-axis']['time-mode'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Use time mode'),
+      '#default_value' => $this->options['x-axis']['time-mode'],
     );
     
-    $form['flot_options_array'] = array(
+    $form['manual_options_array'] = array(
       '#type' => 'textarea',
       '#cols' => 60,
       '#rows' => 5,
@@ -68,62 +50,8 @@ class flot_charts_views_plugin_style extends views_plugin_style {
       '#default_value' => $this->options['flot_options_array'],
     );
 
-    /*
-     *  x and y min + max coming soon
-     *
-
-    // Generate label fields
-    $label_options = array(
-      '' => '< '. t('No labels') .' >',
-      'default' => t('Default (from data points)'),
-    );
-
-    $form['x'] = array(
-      '#tree' => TRUE,
-      '#type' => 'fieldset',
-      '#title' => t('X Axis'),
-      '#collapsible' => TRUE,
-      '#collapsed' => FALSE,
-    );
-    $form['x']['label'] = array(
-      '#type' => 'select',
-      '#options'=> $label_options,
-      '#title' => t('Labels'),
-      '#default_value' => $this->options['x']['label'],
-    );
-    $form['y'] = array(
-      '#tree' => TRUE,
-      '#type' => 'fieldset',
-      '#title' => t('Y Axis'),
-      '#collapsible' => TRUE,
-      '#collapsed' => FALSE,
-    );
-    $form['y']['label'] = array(
-      '#type' => 'select',
-      '#options'=> $label_options,
-      '#title' => t('Labels'),
-      '#default_value' => $this->options['y']['label'],
-    );
-    $form['y']['pad'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Add headroom above points'),
-      '#default_value' => $this->options['y']['pad'],
-    );
-    $form['y']['custom-y-max'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Y Max'),
-      '#size' => 15,
-      '#description' => t("(Optional) Enter the Y axis Max."),
-      '#default_value' => $this->options['y']['custom-y-max'],
-    );
-    $form['y']['custom-y-min'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Y Min'),
-      '#size' => 15,
-      '#description' => t("(Optional) Enter the Y axis Min."),
-      '#default_value' => $this->options['y']['custom-y-min'],
-    );
-    */
+    // TODO x and y min + max with option to expose
+     
 
   }
 
@@ -163,7 +91,6 @@ class flot_charts_views_plugin_style extends views_plugin_style {
     $options = $this->options;
 
     // Parameters
-    $type = !empty($options['type']) ? $options['type'] : 'line';
     $size = !empty($options['size']) ? explode('x', $options['size']) : array('200','100');
 
     // DOM element options
@@ -173,42 +100,31 @@ class flot_charts_views_plugin_style extends views_plugin_style {
     $vars['element'] = $element;
 
     // Build layer.
+    // TODO This could be our function to sort through the data into groups
     $layers = $this->build_layer($this->view, $this->view->result, $this->view->get_title());
-
 
     // $vars['data'][] = $layers['series'];
     // $vars['data'][] = array( "label" => "far", "data" => $layers['series']->data);
     $vars['data'][] = array( "data" => $layers['series']->data);
-    $vars['titles'] = $layers['titles'];
 
     // Set up the type class, set axes
     switch ($options['type']) {
       case 'point':
-        $style = new flotStylePoint();
+        $flot_options = new flotStylePoint();
         break;
       case 'bar':
-        $style = new flotStyleBar();
+        $flot_options = new flotStyleBar();
         break;
       case 'line':
       default:
-        $style = new flotStyleLine();
+        $flot_options = new flotStyleLine();
         break;
     }
-    // Set colors.
-    if (isset($options['colors']['0'])) {
-        $style->colors[0] = $options['colors']['0'];
-    }
 
-    if (isset($options['colors']['1'])) {
-        $style->colors[1] = $options['colors']['1'];
-    }
-    if (isset($options['colors']['2'])) {
-        $style->colors[2] = $options['colors']['2'];
-    }
+    // Set to time mode if chosen
+    $flot_options->xaxis->mode = !empty($options['x-axis']['time-mode']) ? 'time' : NULL;
 
-    $vars['options'] = $style;
-    $vars['options']->xaxis->mode = 'time';
-    unset($vars['options']->xaxis->ticks);
+    $vars['options'] = $flot_options;
 
   }
 
