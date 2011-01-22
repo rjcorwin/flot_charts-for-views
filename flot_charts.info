@@ -3,4 +3,5 @@ description = Provides a Views style plugin and field handler for producing Flot
 core = 6.x
 dependencies[] = views
 dependencies[] = flot
+dependencies[] = date
 

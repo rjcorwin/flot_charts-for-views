@@ -1,5 +1,7 @@
 A "Flot Charts" style plugin and field handler for Drupal View's module.
 
+Requires the Date module, Flot module, Views module, and PHP 5.2+ because it uses the DateTime class for displaying correct times with respect to daylight savings laws. 
+
 Based on the Views integration in the original Flot module http://drupal.org/project/flot
 
 By R.J. Steinert - http://rjsteinert.com
