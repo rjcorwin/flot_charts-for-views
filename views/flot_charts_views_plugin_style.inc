@@ -5,8 +5,9 @@ class flot_charts_views_plugin_style extends views_plugin_style {
     $options = parent::option_definition();
     $options['type'] = array('default' => 'line');
     $options['size'] = array('default' => '400x200');
-    $options['manual_options_array'] = array('default' => 'null');
     $options['x-axis']['time-mode'] = array('default' => FALSE);
+    $options['manual_options']['json'] = array('default' => 'null');
+    $options['manual_options']['use_json'] = array('default' => FALSE);
     return $options;
   }
 
@@ -40,14 +41,29 @@ class flot_charts_views_plugin_style extends views_plugin_style {
       '#title' => t('Use time mode'),
       '#default_value' => $this->options['x-axis']['time-mode'],
     );
-    
-    $form['manual_options_array'] = array(
+
+    $form['manual_options'] = array(
+      '#tree' => TRUE,
+      '#type' => 'fieldset',
+      '#title' => t('Manual Options'),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+    );
+
+    $form['manual_options']['json'] = array(
       '#type' => 'textarea',
       '#cols' => 60,
       '#rows' => 5,
-      '#title' => t('Options array'),
-      '#description' => t("Manually override all options by entering an array for the options."),
-      '#default_value' => $this->options['flot_options_array'],
+      '#title' => t('Manual Options JSON'),
+      '#description' => t("Manually enter a JSON object for the options object bound for Flot's .plot() function.
+        See <a href='http://flot.googlecode.com/svn/trunk/API.txt'>the Flot API documentation</a> for a list of all options."),
+      '#default_value' => $this->options['manual_options']['array'],
+    );
+
+    $form['manual_options']['use_json'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Override all options with the Manual Options JSON.'),
+      '#default_value' => $this->options['manual_options']['use_json'],
     );
 
     // TODO x and y min + max with option to expose
@@ -69,12 +85,10 @@ class flot_charts_views_plugin_style extends views_plugin_style {
       return;
     }
 
-    // Iterate over results to build data and ticks
+    // Iterate over results to build data
     foreach ($result as $id => $row) {
       $datapoint = $view->field[$flot_field]->flot_render($row);
-      $value = $datapoint['value'];
-      $label = isset($datapoint['label']) ? $datapoint['label'] : $datapoint['value'];
-      
+      $value = $datapoint['value']; 
       $layer['series'][] = array($value[0], $value[1]);
     }
     $layer['series'] = new flotData($layer['series']);
@@ -100,7 +114,7 @@ class flot_charts_views_plugin_style extends views_plugin_style {
     $vars['element'] = $element;
 
     // Build layer.
-    // TODO This could be our function to sort through the data into groups
+    // TODO build_layer(s) could be our function to sort through the data into groups
     $layers = $this->build_layer($this->view, $this->view->result, $this->view->get_title());
 
     // $vars['data'][] = $layers['series'];
@@ -121,11 +135,16 @@ class flot_charts_views_plugin_style extends views_plugin_style {
         break;
     }
 
-    // Set to time mode if chosen
+    // Set x-axis to time mode if chosen
     $flot_options->xaxis->mode = !empty($options['x-axis']['time-mode']) ? 'time' : NULL;
 
-    $vars['options'] = $flot_options;
-
+    // Decode the manually entered JSON object if set to do so, otherwise set $vars['options'] to $flot_options
+    $json_decoded = !empty($options['manual_options']['use_json']) ? json_decode($options['manual_options']['json']) : TRUE;
+    if(!$json_decoded) {
+      drupal_set_message("A manually inserted json object (in the Flot Charts Views style) failed to validate using PHP's json_decode() function.", 'error');
+    }
+    $vars['options'] = !empty($options['manual_options']['use_json']) ? $json_decoded : $flot_options;
+    
   }
 
   /**
